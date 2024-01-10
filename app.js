@@ -3,12 +3,15 @@ const ejs = require("ejs");
 const app = express();
 const port = 5000;
 const bodyParser = require("body-parser");
+var session = require("express-session");
 
-require("dotenv").config();
+require("dotenv").config(); // .config() 메서드에 인자를 전달하지 않음
 
 const mysql = require("mysql2");
 const connection = mysql.createConnection(process.env.DATABASE_URL);
 console.log("Connected to PlanetScale!");
+
+connection.query("SET time_zone='Asia/Seoul'");
 
 app.set("view engine", "ejs");
 app.set("views", "./views");
@@ -16,13 +19,34 @@ app.set("views", "./views");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(__dirname + "/public"));
 
+app.use(
+  session({
+    secret: "gajigaji04",
+    cookie: { maxAge: 60000 },
+    resave: true,
+    saveUninitialized: true,
+  })
+);
+
+app.use((req, res, next) => {
+  res.locals.user_id = "";
+  res.locals.name = "";
+
+  if (req.session.member) {
+    res.locals.user_id = req.session.member.user_id;
+    res.locals.name = req.session.member.name;
+  }
+  next();
+});
+
 // 라우팅
 app.get("/", (req, res) => {
+  console.log(req.session.member);
   res.render("index"); // ./views/index.ejs
 });
 
 app.get("/profile", (req, res) => {
-  res.render("profile");
+  res.render("profile", { member: req.session.member });
 });
 
 app.get("/map", (req, res) => {
@@ -33,6 +57,10 @@ app.get("/contact", (req, res) => {
   res.render("contact");
 });
 
+app.get("/contactList", (req, res) => {
+  res.render("contactList");
+});
+
 // 문의사항 MySQL 저장
 app.post("/contactProc", (req, res) => {
   const name = req.body.name;
@@ -40,9 +68,11 @@ app.post("/contactProc", (req, res) => {
   const email = req.body.email;
   const memo = req.body.memo;
 
-  var sql = `insert into contact (name, phone, email, memo, regdate) values('${name}', '${phone}','${email}','${memo}', now() )`;
+  var sql = `insert into contact (name, phone, email, memo, regdate) values(?, ?, ?, ?, now() )`;
 
-  connection.query(sql, function (err, result) {
+  var values = [name, phone, email, memo];
+
+  connection.query(sql, values, function (err, result) {
     if (err) {
       console.error(err);
       res.send(
@@ -55,6 +85,21 @@ app.post("/contactProc", (req, res) => {
     res.send(
       "<script>alert('문의사항이 등록되었습니다.'); location.href='/';</script>"
     );
+  });
+});
+
+// 문의사항 리스트 표시
+app.get("/contactList", (req, res) => {
+  var sql = "SELECT * FROM contact";
+  connection.query(sql, function (err, result, fields) {
+    if (err) {
+      throw err;
+    }
+
+    // Assign the result to res.locals.lists, not res.locals.list
+    res.locals.lists = result;
+
+    res.render("contactList");
   });
 });
 
@@ -71,14 +116,41 @@ app.get("/contactDelete", (req, res) => {
   });
 });
 
-// 문의사항 리스트 표시
-app.get("/contactList", (req, res) => {
-  var sql = "SELECT * FROM contact";
-  connection.query(sql, function (err, result, fields) {
+// 회원 로그인
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+app.post("/loginProc", (req, res) => {
+  const user_id = req.body.user_id;
+  const pw = req.body.pw;
+
+  var sql = "SELECT * FROM member where user_id=? and pw=?";
+
+  var values = [user_id, pw];
+
+  connection.query(sql, values, function (err, result) {
     if (err) throw err;
-    console.log(result);
-    res.render("contactList", { lists: result });
+    if (result.length === 0) {
+      res.send(
+        "<script>alert('존재하지 않는 아이디입니다.'); location.href='/login';</script>"
+      );
+    } else {
+      //console.log(result[0]);
+
+      req.session.member = result[0];
+
+      res.send("<script>alert('환영합니다.'); location.href='/';</script>");
+    }
   });
+});
+
+app.get("/logout", (req, res) => {
+  req.session.member = null;
+
+  res.send(
+    "<script>alert('로그아웃 되었습니다.'); location.href='/';</script>"
+  );
 });
 
 app.listen(port, () => {
