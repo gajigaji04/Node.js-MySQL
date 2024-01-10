@@ -41,7 +41,6 @@ app.use((req, res, next) => {
 
 // 라우팅
 app.get("/", (req, res) => {
-  console.log(req.session.member);
   res.render("index"); // ./views/index.ejs
 });
 
@@ -88,21 +87,6 @@ app.post("/contactProc", (req, res) => {
   });
 });
 
-// 문의사항 리스트 표시
-app.get("/contactList", (req, res) => {
-  var sql = "SELECT * FROM contact";
-  connection.query(sql, function (err, result, fields) {
-    if (err) {
-      throw err;
-    }
-
-    // Assign the result to res.locals.lists, not res.locals.list
-    res.locals.lists = result;
-
-    res.render("contactList");
-  });
-});
-
 // 문의사항 삭제
 app.get("/contactDelete", (req, res) => {
   var idx = req.query.idx;
@@ -113,6 +97,16 @@ app.get("/contactDelete", (req, res) => {
     res.send(
       "<script>alert('문의사항이 삭제되었습니다.'); location.href='/contactList';</script>"
     );
+  });
+});
+
+// 문의사항 리스트 표시
+app.get("/contactList", (req, res) => {
+  var sql = "SELECT * FROM contact";
+  connection.query(sql, function (err, result, fields) {
+    if (err) throw err;
+    console.log(result);
+    res.render("contactList", { lists: result });
   });
 });
 
