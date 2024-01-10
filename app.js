@@ -14,6 +14,7 @@ app.set("view engine", "ejs");
 app.set("views", "./views");
 
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static(__dirname + "/public"));
 
 // 라우팅
 app.get("/", (req, res) => {
@@ -32,6 +33,7 @@ app.get("/contact", (req, res) => {
   res.render("contact");
 });
 
+// 문의사항 MySQL 저장
 app.post("/contactProc", (req, res) => {
   const name = req.body.name;
   const phone = req.body.phone;
@@ -44,7 +46,7 @@ app.post("/contactProc", (req, res) => {
     if (err) {
       console.error(err);
       res.send(
-        "<script>alert('문의사항 등록 불가');location.href='/'</script>"
+        "<script>alert('문의사항 등록 불가');location.href='/';</script>"
       );
       return;
     }
@@ -53,6 +55,29 @@ app.post("/contactProc", (req, res) => {
     res.send(
       "<script>alert('문의사항이 등록되었습니다.'); location.href='/';</script>"
     );
+  });
+});
+
+// 문의사항 삭제
+app.get("/contactDelete", (req, res) => {
+  var idx = req.query.idx;
+  var sql = `DELETE FROM contact WHERE idx='${idx}'`;
+
+  connection.query(sql, function (err, result) {
+    if (err) throw err;
+    res.send(
+      "<script>alert('문의사항이 삭제되었습니다.'); location.href='/contactList';</script>"
+    );
+  });
+});
+
+// 문의사항 리스트 표시
+app.get("/contactList", (req, res) => {
+  var sql = "SELECT * FROM contact";
+  connection.query(sql, function (err, result, fields) {
+    if (err) throw err;
+    console.log(result);
+    res.render("contactList", { lists: result });
   });
 });
 
