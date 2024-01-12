@@ -99,10 +99,13 @@ app.get("/contactDelete", (req, res) => {
 // 문의사항 리스트 표시
 app.get("/contactList", (req, res) => {
   var sql = "SELECT * FROM contact";
-  connection.query(sql, function (err, result, fields) {
-    if (err) throw err;
-    console.log(result);
-    res.render("contactList", { lists: result });
+  connection.query(sql, function (err, lists, fields) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log(lists);
+      res.render("contactList", { lists: lists });
+    }
   });
 });
 
