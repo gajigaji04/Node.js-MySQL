@@ -56,10 +56,6 @@ app.get("/contact", (req, res) => {
   res.render("contact");
 });
 
-app.get("/contactList", (req, res) => {
-  res.render("contactList");
-});
-
 // 문의사항 MySQL 저장
 app.post("/contactProc", (req, res) => {
   const name = req.body.name;
